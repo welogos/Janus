@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path="compose.yaml" />
+    <Project Path="Janus.Tests/Janus.Tests.csproj" />
+  </Folder>
+  <Project Path="Janus.Api/Janus.Api.csproj" />
+  <Project Path="Janus.Application/Janus.Application.csproj" />
+  <Project Path="Janus.Domain/Janus.Domain.csproj" />
+  <Project Path="Janus.Dtos/Janus.Dtos.csproj" />
+  <Project Path="Janus.Infrastructure/Janus.Infrastructure.csproj" />
+  <Project Path="Janus.IoC/Janus.IoC.csproj" />
+</Solution>
