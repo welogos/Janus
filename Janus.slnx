@@ -1,7 +1,13 @@
 <Solution>
   <Folder Name="/Solution Items/">
     <File Path="compose.yaml" />
-    <Project Path="Janus.Tests/Janus.Tests.csproj" />
+  </Folder>
+  <Folder Name="/Tests/">
+    <Project Path="Janus.Api.Tests/Janus.Api.Tests.csproj" />
+    <Project Path="Janus.Application.Tests/Janus.Application.Tests.csproj" />
+    <Project Path="Janus.Domain.Tests/Janus.Domain.Tests.csproj" />
+    <Project Path="Janus.Infrastructure.Tests/Janus.Infrastructure.Tests.csproj" />
+    <Project Path="Janus.IoC.Tests/Janus.IoC.Tests.csproj" />
   </Folder>
   <Project Path="Janus.Api/Janus.Api.csproj" />
   <Project Path="Janus.Application/Janus.Application.csproj" />
