@@ -93,7 +93,7 @@ public sealed class GlobalExceptionHandler(
             {
                 Status = StatusCodes.Status500InternalServerError,
                 Title = "Internal server error",
-                Detail = exception.Message
+                Detail = "An unexpected error occurred while processing the request."
             }
         };
 
