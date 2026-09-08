@@ -44,6 +44,22 @@ public class IoCTests
     }
 
     [Fact]
+    public void WhenEndpointRegistryIsResolvedHasSingletonLifetime()
+    {
+        using var serviceProvider = CreateServiceProvider();
+        using var firstScope = serviceProvider.CreateScope();
+        using var secondScope = serviceProvider.CreateScope();
+
+        var firstResolution = firstScope.ServiceProvider
+            .GetRequiredService<IEndpointRegistry>();
+        var secondResolution = secondScope.ServiceProvider
+            .GetRequiredService<IEndpointRegistry>();
+
+        Assert.IsType<EndpointRegistry>(firstResolution);
+        Assert.Same(firstResolution, secondResolution);
+    }
+
+    [Fact]
     public void WhenDatabaseContextIsResolvedHasConfiguredPostgreSqlProvider()
     {
         using var serviceProvider = CreateServiceProvider();

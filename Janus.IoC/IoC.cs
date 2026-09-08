@@ -28,6 +28,10 @@ public static class IoC
         // Services
         service.AddScoped<IEndpointService, EndpointService>();
         
+        // Cache
+        service.AddMemoryCache();
+        service.AddSingleton<IEndpointRegistry, EndpointRegistry>();
+        
         return service;
     }
 }
