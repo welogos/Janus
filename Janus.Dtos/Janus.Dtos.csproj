@@ -6,4 +6,8 @@
         <Nullable>enable</Nullable>
     </PropertyGroup>
 
+    <ItemGroup>
+      <ProjectReference Include="..\Janus.Domain\Janus.Domain.csproj" />
+    </ItemGroup>
+
 </Project>
