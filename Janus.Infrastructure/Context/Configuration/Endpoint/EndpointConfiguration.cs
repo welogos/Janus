@@ -22,6 +22,10 @@ public class EndpointConfiguration : IEntityTypeConfiguration<Domain.Models.Endp
             .IsRequired()
             .HasMaxLength(500);
 
+        builder.Property(x => x.TargetUrl)
+            .IsRequired()
+            .HasMaxLength(2048);
+
         builder.Property(x => x.Method)
             .IsRequired()
             .HasConversion<string>()

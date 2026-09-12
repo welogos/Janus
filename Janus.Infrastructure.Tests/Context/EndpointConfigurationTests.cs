@@ -18,6 +18,7 @@ public class EndpointConfigurationTests
         Assert.Equal(nameof(EndpointDomain.Id), entity.FindPrimaryKey()!.Properties.Single().Name);
         Assert.Equal(100, entity.FindProperty(nameof(EndpointDomain.ClientName))!.GetMaxLength());
         Assert.Equal(500, entity.FindProperty(nameof(EndpointDomain.ClientRoute))!.GetMaxLength());
+        Assert.Equal(2048, entity.FindProperty(nameof(EndpointDomain.TargetUrl))!.GetMaxLength());
         Assert.Equal(10, entity.FindProperty(nameof(EndpointDomain.Method))!.GetMaxLength());
         Assert.Equal(typeof(string), entity.FindProperty(nameof(EndpointDomain.Method))!.GetProviderClrType());
     }

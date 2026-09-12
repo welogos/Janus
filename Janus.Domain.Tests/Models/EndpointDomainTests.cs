@@ -29,7 +29,8 @@ public class EndpointDomainTests
             "Portfolio",
             "/api/chat",
             EHttpMethods.Post,
-            false);
+            false,
+            "http://hermes:8080/api/chat");
 
         var finishedAt = DateTime.UtcNow;
 
@@ -37,6 +38,7 @@ public class EndpointDomainTests
         Assert.Equal("Portfolio", endpoint.ClientName);
         Assert.Equal("/api/chat", endpoint.ClientRoute);
         Assert.Equal(EHttpMethods.Post, endpoint.Method);
+        Assert.Equal("http://hermes:8080/api/chat", endpoint.TargetUrl);
         Assert.False(endpoint.Enabled);
         Assert.InRange(endpoint.CreatedAt, startedAt, finishedAt);
         Assert.InRange(endpoint.UpdatedAt, startedAt, finishedAt);
@@ -53,6 +55,17 @@ public class EndpointDomainTests
             EHttpMethods.Post);
 
         Assert.True(endpoint.Enabled);
+    }
+
+    [Fact]
+    public void WhenRouteHasEquivalentFormattingHasStoredCanonicalRoute()
+    {
+        var endpoint = new EndpointDomain(
+            "Portfolio",
+            " /API/Chat/ ",
+            EHttpMethods.Post);
+
+        Assert.Equal("/api/chat", endpoint.ClientRoute);
     }
     #endregion
 }

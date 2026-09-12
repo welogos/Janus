@@ -130,6 +130,23 @@ public class EndpointValidationTests
         result.ShouldHaveValidationErrorFor(x => x.Method)
             .WithErrorMessage("HTTP method is invalid.");
     }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("hermes/internal")]
+    [InlineData("file:///etc/passwd")]
+    [InlineData("http://user:password@hermes/internal")]
+    [InlineData("http://hermes/internal#fragment")]
+    public void WhenTargetUrlIsNotAbsoluteHttpUrlHasError(string targetUrl)
+    {
+        var endpointDto = CreateValidEndpointDto();
+        endpointDto.TargetUrl = targetUrl;
+
+        var result = Validator.TestValidate(endpointDto);
+
+        Assert.False(result.IsValid);
+        result.ShouldHaveValidationErrorFor(x => x.TargetUrl);
+    }
     #endregion
 
     #region Private Methods
@@ -138,6 +155,7 @@ public class EndpointValidationTests
         {
             ClientName = "ClientName",
             ClientRoute = "/ClientRoute",
+            TargetUrl = "http://hermes:8080/api/messages",
             Method = EHttpMethods.Get,
             Enabled = true,
         };

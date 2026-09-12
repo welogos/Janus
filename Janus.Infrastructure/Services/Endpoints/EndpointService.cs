@@ -17,11 +17,23 @@ public class EndpointService(AppDbContext context, IEndpointRegistry registry, I
             dto.ClientRoute,
             dto.Method);
 
-        if (await context.Endpoints.AnyAsync(x => x.ClientRoute == dto.ClientRoute && x.Method == dto.Method, cancellationToken))
+        var endpoint = new EndpointDomain(
+            dto.ClientName,
+            dto.ClientRoute,
+            dto.Method,
+            dto.Enabled,
+            dto.TargetUrl);
+
+        var routesForMethod = await context.Endpoints
+            .Where(existing => existing.Method == endpoint.Method)
+            .Select(existing => existing.ClientRoute)
+            .ToListAsync(cancellationToken);
+
+        if (routesForMethod.Any(route =>
+                EndpointRoute.Normalize(route) == endpoint.ClientRoute))
+        {
             throw new ArgumentException("Endpoint already exists.");
-        
-        
-        var endpoint = new EndpointDomain(dto.ClientName, dto.ClientRoute, dto.Method, dto.Enabled);
+        }
 
         await context.Endpoints.AddAsync(endpoint, cancellationToken);
         await context.SaveChangesAsync(cancellationToken);

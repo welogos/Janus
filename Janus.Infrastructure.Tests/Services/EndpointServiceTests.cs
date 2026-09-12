@@ -27,8 +27,27 @@ public class EndpointServiceTests
         Assert.NotEqual(Guid.Empty, endpoint.Id);
         Assert.Equal(endpointDto.ClientName, endpoint.ClientName);
         Assert.Equal(endpointDto.ClientRoute, endpoint.ClientRoute);
+        Assert.Equal(endpointDto.TargetUrl, endpoint.TargetUrl);
         Assert.Equal(endpointDto.Method, endpoint.Method);
         Assert.False(endpoint.Enabled);
+    }
+
+    [Fact]
+    public async Task WhenEquivalentNormalizedRouteAndMethodExistHasRejectedConflict()
+    {
+        await using var context = CreateContext();
+        context.Endpoints.Add(new EndpointDomain(
+            "Existing client",
+            "/API/CHAT/",
+            EHttpMethods.Post,
+            targetUrl: "http://existing:8080/chat"));
+        await context.SaveChangesAsync();
+        var service = await CreateServiceAsync(context);
+
+        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
+            service.CreateEndpointAsync(CreateEndpointDto(), CancellationToken.None));
+
+        Assert.Equal("Endpoint already exists.", exception.Message);
     }
 
     [Fact]
@@ -220,6 +239,7 @@ public class EndpointServiceTests
         {
             ClientName = "Portfolio",
             ClientRoute = "/api/chat",
+            TargetUrl = "http://hermes:8080/api/chat",
             Method = EHttpMethods.Post,
             Enabled = enabled,
         };

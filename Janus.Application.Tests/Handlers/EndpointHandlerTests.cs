@@ -88,6 +88,7 @@ public class EndpointHandlerTests
         {
             ClientName = "Client",
             ClientRoute = "/route",
+            TargetUrl = "http://hermes:8080/route",
             Method = EHttpMethods.Post,
             Enabled = true,
         };
