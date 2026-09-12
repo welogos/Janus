@@ -51,12 +51,16 @@ public class EndpointRegistry(IMemoryCache cache, ILogger<EndpointRegistry> logg
 
         var endpoints = await GetEndpointsAsync();
 
-        route = NormalizeRoute(route);
+        route = EndpointRoute.Normalize(route);
 
-        var endpoint = endpoints?.FirstOrDefault(x =>
-            x.Enabled &&
-            NormalizeRoute(x.ClientRoute) == route &&
-            x.Method == method);
+        var endpoint = endpoints?
+            .Where(x =>
+                x.Enabled &&
+                EndpointRoute.Normalize(x.ClientRoute) == route &&
+                x.Method == method)
+            .OrderBy(x => x.CreatedAt)
+            .ThenBy(x => x.Id)
+            .FirstOrDefault();
 
         logger.LogDebug(
             "Endpoint resolution for route {Route} and method {Method} completed. EndpointFound={EndpointFound}.",
@@ -65,6 +69,23 @@ public class EndpointRegistry(IMemoryCache cache, ILogger<EndpointRegistry> logg
             endpoint is not null);
 
         return endpoint;
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<EndpointDomain>> FindByRouteAsync(string route)
+    {
+        var endpoints = await GetEndpointsAsync();
+        var normalizedRoute = EndpointRoute.Normalize(route);
+
+        return endpoints?
+            .Where(endpoint =>
+                endpoint.Enabled &&
+                EndpointRoute.Normalize(endpoint.ClientRoute) == normalizedRoute)
+            .OrderBy(endpoint => endpoint.Method)
+            .ThenBy(endpoint => endpoint.CreatedAt)
+            .ThenBy(endpoint => endpoint.Id)
+            .ToArray()
+            ?? [];
     }
 
     public async Task SetEndpointAsync(EndpointDomain endpoint)
@@ -141,16 +162,4 @@ public class EndpointRegistry(IMemoryCache cache, ILogger<EndpointRegistry> logg
             endpoints.Where(x => x.Enabled).ToList());
     }
 
-    private static string NormalizeRoute(string route)
-    {
-        route = route.Trim();
-
-        if (!route.StartsWith('/'))
-            route = "/" + route;
-
-        if (route.Length > 1)
-            route = route.TrimEnd('/');
-
-        return route.ToLowerInvariant();
-    }
 }
