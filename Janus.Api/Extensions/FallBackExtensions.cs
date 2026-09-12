@@ -1,92 +1,88 @@
-using Janus.Application.Interfaces.Services.Endpoint;
-using Janus.Domain.Enums;
+using Janus.Application.Interfaces.Services.Dispatching;
+using Janus.Application.Models.Dispatching;
 
 namespace Janus.Api.Extensions;
 
+/// <summary>
+/// Maps the HTTP adapter for dynamic endpoint dispatch.
+/// </summary>
 public static class FallBackExtensions
 {
+    /// <summary>
+    /// Maps the catch-all route used after administrative controller routes have been evaluated.
+    /// </summary>
+    /// <param name="app">The Janus web application.</param>
     public static Task EndpointFallBackAsync(this WebApplication app)
     {
-        try
-        {
-            return Task.FromResult(app.MapFallback("/{**path}", async (context) 
-                => await EndpointFallBackConfiguration(context, app)));
-        }
-        catch (Exception exception)
-        {
-            return Task.FromException(exception);
-        }
+        app.MapFallback("/{**path}", DispatchAsync);
+        return Task.CompletedTask;
     }
 
-    private static async Task EndpointFallBackConfiguration(HttpContext context, WebApplication app)
+    private static async Task DispatchAsync(HttpContext context)
     {
-        var registry = app.Services.GetRequiredService<IEndpointRegistry>();
-        var logger =  app.Services.GetRequiredService<ILogger<Program>>();
-        
+        var resolver = context.RequestServices.GetRequiredService<IEndpointResolver>();
+        var dispatcher = context.RequestServices.GetRequiredService<IEndpointDispatcher>();
         var route = context.Request.Path.Value ?? "/";
-        var requestMethod = context.Request.Method;
+        var resolution = await resolver.ResolveAsync(route, context.Request.Method);
 
-        logger.LogDebug(
-            "Resolving incoming dynamic route {Route} for HTTP method {RequestMethod}.",
-            route,
-            requestMethod);
+        context.Response.Headers[CorrelationIdMiddleware.HeaderName] =
+            context.TraceIdentifier;
 
-        if (!Enum.TryParse<EHttpMethods>(
-                requestMethod,
-                true,
-                out var method))
+        if (resolution.Status == EndpointResolutionStatus.NotFound)
         {
-            logger.LogWarning(
-                "HTTP method {RequestMethod} is not supported for dynamic route {Route}.",
-                requestMethod,
-                route);
-
-            context.Response.StatusCode =
-                StatusCodes.Status405MethodNotAllowed;
-
+            context.Response.StatusCode = StatusCodes.Status404NotFound;
             return;
         }
 
-        var endpoints = await registry.GetEndpointsAsync();
-
-        logger.LogDebug(
-            "Endpoint registry contains {EndpointCount} endpoints during dynamic route resolution.",
-            endpoints?.Count ?? 0);
-
-        var endpoint = await registry.FindAsync(route, method);
-
-        if (endpoint is null)
+        if (resolution.Status == EndpointResolutionStatus.MethodNotAllowed)
         {
-            logger.LogWarning(
-                "Dynamic endpoint was not found for route {Route} and method {Method}.",
-                route,
-                method);
-
-            context.Response.StatusCode =
-                StatusCodes.Status404NotFound;
-
-            await context.Response.WriteAsJsonAsync(new
-            {
-                message = "Dynamic endpoint was not found.",
-                route,
-                method = method.ToString()
-            });
-
+            context.Response.StatusCode = StatusCodes.Status405MethodNotAllowed;
+            context.Response.Headers.Allow = string.Join(
+                ", ",
+                resolution.AllowedMethods.Select(method => method.ToString().ToUpperInvariant()));
             return;
         }
 
-        logger.LogDebug(
-            "Dynamic endpoint {EndpointId} successfully resolved for route {Route} and method {Method}.",
-            endpoint.Id,
-            route,
-            method);
+        var endpoint = resolution.Endpoint
+            ?? throw new InvalidOperationException(
+                "Endpoint resolution returned no endpoint for a successful result.");
 
-        await context.Response.WriteAsJsonAsync(new
-        {
-            endpoint.Id,
-            endpoint.ClientName,
-            endpoint.ClientRoute,
-            endpoint.Method
-        });
+        var request = new DispatchRequest(
+            route,
+            context.Request.Method,
+            context.Request.QueryString.Value ?? string.Empty,
+            await ReadBodyAsync(context.Request, context.RequestAborted),
+            context.Request.Headers.ToDictionary(
+                header => header.Key,
+                header => (IReadOnlyList<string>)header.Value
+                    .Select(value => value ?? string.Empty)
+                    .ToArray(),
+                StringComparer.OrdinalIgnoreCase),
+            context.TraceIdentifier);
+
+        var response = await dispatcher.DispatchAsync(
+            endpoint,
+            request,
+            context.RequestAborted);
+
+        context.Response.StatusCode = response.StatusCode;
+
+        foreach (var header in response.Headers)
+            context.Response.Headers[header.Key] = header.Value.ToArray();
+
+        if (!response.Body.IsEmpty)
+            await context.Response.Body.WriteAsync(response.Body, context.RequestAborted);
+    }
+
+    private static async Task<ReadOnlyMemory<byte>> ReadBodyAsync(
+        HttpRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (request.ContentLength == 0)
+            return ReadOnlyMemory<byte>.Empty;
+
+        await using var buffer = new MemoryStream();
+        await request.Body.CopyToAsync(buffer, cancellationToken);
+        return buffer.ToArray();
     }
 }

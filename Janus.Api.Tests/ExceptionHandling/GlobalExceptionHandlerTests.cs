@@ -2,6 +2,7 @@ using System.Text.Json;
 using FluentValidation;
 using FluentValidation.Results;
 using Janus.Api.ExceptionHandling;
+using Janus.Application.Exceptions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -121,6 +122,50 @@ public class GlobalExceptionHandlerTests
         Assert.DoesNotContain("Bearer secret-token", responseBody);
         Assert.DoesNotContain("stackTrace", responseBody, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain(nameof(GlobalExceptionHandlerTests), responseBody);
+    }
+
+    [Theory]
+    [InlineData(true, StatusCodes.Status504GatewayTimeout, "Gateway timeout")]
+    [InlineData(false, StatusCodes.Status502BadGateway, "Bad gateway")]
+    public async Task WhenDispatchFailureIsHandledHasReturnedSafeGatewayError(
+        bool timedOut,
+        int expectedStatus,
+        string expectedTitle)
+    {
+        var context = CreateHttpContext();
+        context.TraceIdentifier = "correlation-123";
+        var handler = CreateHandler();
+        Exception exception = timedOut
+            ? new EndpointDispatchTimeoutException()
+            : new EndpointUpstreamException();
+
+        await handler.TryHandleAsync(context, exception, CancellationToken.None);
+
+        using var document = await ReadResponseAsync(context);
+        Assert.Equal(expectedStatus, context.Response.StatusCode);
+        Assert.Equal(expectedTitle, document.RootElement.GetProperty("title").GetString());
+        Assert.Equal(
+            "correlation-123",
+            document.RootElement.GetProperty("correlationId").GetString());
+    }
+
+    [Fact]
+    public async Task WhenClientCancelsHasReturnedClientClosedWithoutResponseBody()
+    {
+        using var cancellationTokenSource = new CancellationTokenSource();
+        cancellationTokenSource.Cancel();
+        var context = CreateHttpContext();
+        context.RequestAborted = cancellationTokenSource.Token;
+        var handler = CreateHandler();
+
+        var handled = await handler.TryHandleAsync(
+            context,
+            new OperationCanceledException(cancellationTokenSource.Token),
+            CancellationToken.None);
+
+        Assert.True(handled);
+        Assert.Equal(499, context.Response.StatusCode);
+        Assert.Equal(0, context.Response.Body.Length);
     }
 
     private static GlobalExceptionHandler CreateHandler()

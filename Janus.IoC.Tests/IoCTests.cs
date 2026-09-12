@@ -2,9 +2,11 @@ using FluentValidation;
 using Janus.Application.Features.CQRS.Commands.Endpoint;
 using Janus.Application.Features.Handlers.Endpoint;
 using Janus.Application.Interfaces.Services.Endpoint;
+using Janus.Application.Interfaces.Services.Dispatching;
 using Janus.Dtos.Dtos.Endpoint;
 using Janus.Infrastructure.Context;
 using Janus.Infrastructure.Services.Endpoints;
+using Janus.Infrastructure.Services.Dispatching;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -22,6 +24,9 @@ public class IoCTests
         using var scope = serviceProvider.CreateScope();
 
         Assert.IsType<EndpointService>(scope.ServiceProvider.GetRequiredService<IEndpointService>());
+        Assert.IsType<EndpointResolver>(scope.ServiceProvider.GetRequiredService<IEndpointResolver>());
+        Assert.IsType<EndpointDispatcher>(scope.ServiceProvider.GetRequiredService<IEndpointDispatcher>());
+        Assert.NotNull(scope.ServiceProvider.GetRequiredService<IHttpClientFactory>());
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<IMediator>());
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<IRequestHandler<CreateEndpointCommand>>());
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<IValidator<EndpointDto>>());

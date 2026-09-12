@@ -16,11 +16,13 @@ public class EndpointController(IMediator mediator) : ControllerBase
 
     [HttpGet]
     public async Task<IActionResult> GetEndpoints()
-        => Ok(await mediator.Send(new GetAllEndpointsQuery()));
+        => Ok((await mediator.Send(new GetAllEndpointsQuery()))
+            .Select(EndpointResponseDto.FromDomain));
     
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetEndpoint(Guid id)
-        => Ok(await mediator.Send(new GetEndpointQuery(id)));
+        => Ok(EndpointResponseDto.FromDomain(
+            await mediator.Send(new GetEndpointQuery(id))));
 
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> DeleteEndpoint(Guid id)

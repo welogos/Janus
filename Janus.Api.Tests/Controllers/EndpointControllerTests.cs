@@ -43,7 +43,8 @@ public class EndpointControllerTests
         var result = await controller.GetEndpoints();
 
         var okResult = Assert.IsType<OkObjectResult>(result);
-        Assert.Same(endpoints, okResult.Value);
+        var response = Assert.IsAssignableFrom<IEnumerable<EndpointResponseDto>>(okResult.Value);
+        Assert.Equal(endpoints.Select(endpoint => endpoint.Id), response.Select(endpoint => endpoint.Id));
     }
 
     [Fact]
@@ -57,7 +58,11 @@ public class EndpointControllerTests
         var result = await controller.GetEndpoint(endpoint.Id);
 
         var okResult = Assert.IsType<OkObjectResult>(result);
-        Assert.Same(endpoint, okResult.Value);
+        var response = Assert.IsType<EndpointResponseDto>(okResult.Value);
+        Assert.Equal(endpoint.Id, response.Id);
+        Assert.DoesNotContain(
+            typeof(EndpointResponseDto).GetProperties(),
+            property => property.Name == nameof(EndpointDomain.TargetUrl));
         Assert.Equal(endpoint.Id, service.RequestedEndpointId);
     }
 
@@ -96,6 +101,7 @@ public class EndpointControllerTests
         {
             ClientName = "Portfolio",
             ClientRoute = "/api/chat",
+            TargetUrl = "http://hermes:8080/api/chat",
             Method = EHttpMethods.Post,
             Enabled = true,
         };

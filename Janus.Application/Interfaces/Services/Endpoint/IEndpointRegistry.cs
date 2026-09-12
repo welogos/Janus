@@ -46,4 +46,11 @@ public interface IEndpointRegistry
     /// <param name="method">The HTTP method to match.</param>
     /// <returns>The matching endpoint when found; otherwise, <c>null</c>.</returns>
     Task<EndpointDomain?> FindAsync(string route, EHttpMethods method);
+
+    /// <summary>
+    /// Retrieves all enabled endpoints matching a normalized public route.
+    /// </summary>
+    /// <param name="route">The public route to resolve.</param>
+    /// <returns>The matching enabled endpoints.</returns>
+    Task<IReadOnlyList<EndpointDomain>> FindByRouteAsync(string route);
 }
