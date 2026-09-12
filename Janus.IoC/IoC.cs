@@ -1,9 +1,12 @@
 ﻿using FluentValidation;
+using FluentValidation.AspNetCore;
 using Janus.Application.Features.Handlers.Endpoint;
 using Janus.Application.Features.Validations.Endpoint;
 using Janus.Application.Interfaces.Services.Endpoint;
+using Janus.Application.Interfaces.Services.Dispatching;
 using Janus.Infrastructure.Context;
 using Janus.Infrastructure.Services.Endpoints;
+using Janus.Infrastructure.Services.Dispatching;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -24,9 +27,13 @@ public static class IoC
         
         // FluentValidation
         service.AddValidatorsFromAssembly(typeof(EndpointDtoValidator).Assembly);
+        service.AddFluentValidationAutoValidation();
         
         // Services
         service.AddScoped<IEndpointService, EndpointService>();
+        service.AddScoped<IEndpointResolver, EndpointResolver>();
+        service.AddScoped<IEndpointDispatcher, EndpointDispatcher>();
+        service.AddHttpClient(EndpointDispatcher.HttpClientName);
         
         // Cache
         service.AddMemoryCache();

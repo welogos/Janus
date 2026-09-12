@@ -1,4 +1,5 @@
 using FluentValidation;
+using Janus.Application.Exceptions;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 
@@ -12,7 +13,23 @@ public sealed class GlobalExceptionHandler(
         Exception exception,
         CancellationToken cancellationToken)
     {
+        if (exception is OperationCanceledException &&
+            httpContext.RequestAborted.IsCancellationRequested)
+        {
+            logger.LogInformation(
+                "Request was canceled by the client. CorrelationId={CorrelationId}, RequestMethod={RequestMethod}, RequestPath={RequestPath}.",
+                httpContext.TraceIdentifier,
+                httpContext.Request.Method,
+                httpContext.Request.Path);
+
+            if (!httpContext.Response.HasStarted)
+                httpContext.Response.StatusCode = 499;
+
+            return true;
+        }
+
         var problemDetails = CreateProblemDetails(exception);
+        problemDetails.Extensions["correlationId"] = httpContext.TraceIdentifier;
 
         if (problemDetails.Status >= StatusCodes.Status500InternalServerError)
         {
@@ -88,6 +105,18 @@ public sealed class GlobalExceptionHandler(
                 Status = StatusCodes.Status401Unauthorized,
                 Title = "Unauthorized",
                 Detail = exception.Message
+            },
+            EndpointDispatchTimeoutException => new ProblemDetails
+            {
+                Status = StatusCodes.Status504GatewayTimeout,
+                Title = "Gateway timeout",
+                Detail = "The destination service did not respond in time."
+            },
+            EndpointUpstreamException or EndpointConfigurationException => new ProblemDetails
+            {
+                Status = StatusCodes.Status502BadGateway,
+                Title = "Bad gateway",
+                Detail = "The configured destination service could not process the request."
             },
             _ => new ProblemDetails
             {
