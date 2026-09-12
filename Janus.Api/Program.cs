@@ -1,3 +1,4 @@
+using Janus.Api;
 using Janus.Api.ExceptionHandling;
 using Janus.Api.Extensions;
 using Janus.IoC;
@@ -10,6 +11,7 @@ builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
 var app = builder.Build();
 
+app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseExceptionHandler();
 
 await app.MigrateDatabaseAsync();
